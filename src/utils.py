@@ -10,8 +10,8 @@ from langchain import PromptTemplate
 from langchain.chains import RetrievalQA
 from langchain.embeddings import HuggingFaceEmbeddings
 from langchain.vectorstores import FAISS
-from src.prompts import qa_template
-from src.llm import build_llm
+from src.prompts import qa_template, qa_template_cyber_compliance, qa_template_military_intel  # Import the additional prompts
+from src.llm import build_llm  # Import build_llm
 
 # Import config vars
 with open('config/config.yml', 'r', encoding='utf8') as ymlfile:
@@ -37,12 +37,22 @@ def build_retrieval_qa(llm, prompt, vectordb):
     return dbqa
 
 
-def setup_dbqa():
+def setup_dbqa(selected_prompt):  # Accept the selected_prompt as an argument
     embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2",
                                        model_kwargs={'device': 'cpu'})
     vectordb = FAISS.load_local(cfg.DB_FAISS_PATH, embeddings)
     llm = build_llm()
-    qa_prompt = set_qa_prompt()
+
+    # Update qa_prompt based on the selected_prompt
+    if selected_prompt == 'Default Prompt':
+        qa_prompt = set_qa_prompt()
+    elif selected_prompt == 'Cyber-Compliance Prompt':
+        qa_prompt = PromptTemplate(template=qa_template_cyber_compliance, input_variables=['context', 'question'])
+    elif selected_prompt == 'Military Intel Prompt':
+        qa_prompt = PromptTemplate(template=qa_template_military_intel, input_variables=['context', 'question'])
+    else:
+        raise ValueError(f"Invalid prompt: {selected_prompt}")
+
     dbqa = build_retrieval_qa(llm, qa_prompt, vectordb)
 
     return dbqa
